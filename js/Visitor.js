@@ -183,17 +183,36 @@ xLabs.Visitor.prototype = {
         window.addEventListener('keydown', function(event) { onKeyDown(event); }, false);
     },
     update : function(){
+        var self = this;
         var time = Date.now();
         var looptime = 200 * 1000;
         var t = ( time % looptime ) / looptime;
         var pos = this.tubeGeometry.parameters.path.getPointAt( t );
         pos.y += 1.1;
         this.chaseCamera.position.copy(pos);
+        var direction = this.tubeGeometry.parameters.path.getTangentAt(t);
+
+
+
         this.cameraHelper.update();
         if(keyBoardControler.left)
             this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(1));
         if(keyBoardControler.right)
             this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(-1));
+        if(keyBoardControler.up){
+            console.log(this.tubeGeometry.parameters.path.getTangentAt(t));
+        }
+        if(keyBoardControler.down){
+            console.log(this.tubeGeometry.parameters.path);
+        }
+        this.xLabsController.update(function(rotate){
+            if(rotate==1){
+                self.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(1));
+            }
+            else if (rotate==-1){
+                self.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(-1));
+            }
+        });
     },
     addObject : function(object){
         this.scene.add(object);
