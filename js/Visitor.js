@@ -3,10 +3,16 @@
  */
 
 var xLabs = xLabs || {};
+var normal = new THREE.Vector3();
+var binormal = new THREE.Vector3();
 
 xLabs.Visitor = function(){
+    this.startMov = false;
     this.container = null;
     this.camera = null;
+    this.chaseCamera = null;
+    this.cameraTrack;
+    this.tube;
     this.scene = null;
     this.renderer = null;
     this.ground = null;
@@ -20,38 +26,55 @@ xLabs.Visitor = function(){
     this.building = null;
     this.gui;
     this.importObj;
+    this.tubeGeometry;
+    this.cameraHelper;
 }
 
 xLabs.Visitor.prototype = {
     init : function(){
         this.container= document.getElementById('container');
-        this.renderer = new THREE.WebGLRenderer({antialias: false});
+        this.renderer = new THREE.WebGLRenderer({antialias: true});
         this.renderer.setSize(this.width,this.height);
         this.container.appendChild(this.renderer.domElement);
         this.scene = new THREE.Scene();
 //        this.scene.add(this.object);
         THREEx.WindowResize(this.renderer, this.camera);
         this.initXLabsController();
+        this.initBasicController();
         this.initCamera();
         this.initGround();
         this.initSky();
         this.initLight();
         this.initGUI();
-        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
+//        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
+        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
+
 //        this.loadObject('assets/models/car/audi_body.obj', 'assets/models/car/audi_body.mtl');
+
     },
     start : function(){
         var self = this;
         function animation(){
             requestAnimationFrame(animation);
-            self.renderer.render(self.scene, self.camera);
+            if(self.startMov)
+//                self.test();
+                self.update();
+//            console.log(self.tubeGeometry);
+//            self.cameraHelper.update();
+            self.renderer.render(self.scene, self.chaseCamera);
         }
         animation();
     },
     initCamera : function(){
         this.camera = new THREE.PerspectiveCamera(50, this.width/this.height, 0.1, 30000);
-        this.camera.position.set(0,3,0);
-        this.camera.lookAt(new THREE.Vector3(0,0,0));
+        this.chaseCamera = new THREE.PerspectiveCamera(50, this.width/this.height, 0.1, 30000);
+        this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0));
+        this.cameraHelper = new THREE.CameraHelper(this.chaseCamera);
+        this.cameraHelper.visible = false;
+        this.scene.add(this.cameraHelper);
+//        console.log(this.scene);
+        this.camera.position.set(15,15,15);
+        this.camera.lookAt(new THREE.Vector3(0,5,0));
 //        this.camera.setViewOffset(this.width,this.height, this.width/4 , this.height/4, this.width/2, this.height/2);
 
         this.orbitControl = new THREE.OrbitControls( this.camera, this.renderer.domElement );
@@ -93,7 +116,40 @@ xLabs.Visitor.prototype = {
         this.scene.add(this.ground);
     },
     initSky : function(){
-        //TODO
+        var d = new THREE.Texture([]);
+        d.format = THREE.RGBFormat;
+        d.flipY = false;
+        var loader = new THREE.ImageLoader();
+        var getSide;
+        loader.load('assets/image/skyboxsun25degtest.png', function (image) {
+            getSide = function ( x, y ){
+                var size = 1024;
+                var canvas = document.createElement( 'canvas' );
+                canvas.width = size;
+                canvas.height = size;
+                var context = canvas.getContext( '2d' );
+                context.drawImage( image, - x * size, - y * size );
+                return canvas;
+            };
+            d.image[ 0 ] = getSide( 2, 1 ); // px
+            d.image[ 1 ] = getSide( 0, 1 ); // nx
+            d.image[ 2 ] = getSide( 1, 0 ); // py
+            d.image[ 3 ] = getSide( 1, 2 ); // ny
+            d.image[ 4 ] = getSide( 1, 1 ); // pz
+            d.image[ 5 ] = getSide( 3, 1 ); // nz
+            d.needsUpdate = true;
+        });
+        var cubeShader = THREE.ShaderLib['cube'];
+        cubeShader.uniforms['tCube'].value = d;
+        var skyBoxMaterial = new THREE.ShaderMaterial( {
+            fragmentShader: cubeShader.fragmentShader,
+            vertexShader: cubeShader.vertexShader,
+            uniforms: cubeShader.uniforms,
+            depthWrite: false,
+            side: THREE.BackSide
+        });
+        this.sky = new THREE.Mesh(new THREE.BoxGeometry( 10000, 10000, 10000 ),skyBoxMaterial);
+        this.scene.add(this.sky);
     },
     initXLabsController : function(){
         this.xLabsController = new xLabs.webCamController();
@@ -102,29 +158,44 @@ xLabs.Visitor.prototype = {
         var self = this;
         this.loader = new THREE.OBJMTLLoader();
         this.loader.load(obj_path, mtll_path, function(object){
+            var path = object.getObjectByName("CAMERAPATH_Mesh");
+            console.log(path);
+            path.traverse(function(child){
+                if(child instanceof THREE.Mesh){
+                    console.log(child.geometry.vertices);
+                    self.cameraTrack = new THREE.ClosedSplineCurve3([new THREE.Vector3(0.53,0.78,-0.27),
+                        new THREE.Vector3(-1.15,0.78,0.28),new THREE.Vector3(-16.67,0.78,0.28),new THREE.Vector3(-18.61,0.78,-0.27),new THREE.Vector3(-19.22,0.78,-4.04),
+                        new THREE.Vector3(-20.00,0.78,-30.39),new THREE.Vector3(-19.57,0.78,-34.71),new THREE.Vector3(-16.60,0.78,-35.37),new THREE.Vector3(-2.16,0.78,-35.37),
+                        new THREE.Vector3(1.18,0.78,-34.78),new THREE.Vector3(1.65,0.78,-30.43),new THREE.Vector3(1.32,0.78,-4.04), new THREE.Vector3(0.53,0.78,-0.27)]);   //child.geometry.vertices
+                    self.tubeGeometry = new THREE.TubeGeometry(self.cameraTrack, 50, 1, 1, false);
+                    var tubeMaterial = new THREE.MeshBasicMaterial({color:0x000000,wireframe:true});
+//                    tubeMaterial.visible=false;
+                    self.tube = new THREE.Mesh(self.tubeGeometry, tubeMaterial);
+                   self.addObject(self.tube);
+                }
+            });
             self.addObject(object);
+            self.startMov = true;
         });
-
-
-//        var mtlLoader = new THREE.MTLLoader("/assets/models/HosierLane/");
-//        mtlLoader.load(mtll_path, function(materialCreator){
-//            materialCreator.preload();
-//            var objLoader = new THREE.OBJLoader();
-//            objLoader.load(obj_path, function(object){
-//                object.traverse(function(child){
-//                    if (child instanceof THREE.Mesh){
-//                        if(child.material.name){
-//                            var material = materialCreator.create(child.material.name);
-//                            if(material) child.material = material;
-//                        }
-//                    }
-//                });
-//                self.addObject(object);
-//            });
-//        });
+    },
+    initBasicController : function () {
+        window.addEventListener('keyup', function(event) { onKeyUp(event); }, false);
+        window.addEventListener('keydown', function(event) { onKeyDown(event); }, false);
+    },
+    update : function(){
+        var time = Date.now();
+        var looptime = 200 * 1000;
+        var t = ( time % looptime ) / looptime;
+        var pos = this.tubeGeometry.parameters.path.getPointAt( t );
+        pos.y += 1.1;
+        this.chaseCamera.position.copy(pos);
+        this.cameraHelper.update();
+        if(keyBoardControler.left)
+            this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(1));
+        if(keyBoardControler.right)
+            this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(-1));
     },
     addObject : function(object){
-//        object.applyMatrix(new THREE.Matrix4().makeScale(0.2,0.2,0.2))
         this.scene.add(object);
     },
     initGUI : function (){
