@@ -35,7 +35,7 @@ function onKeyPress(event){
         }
     }
     if(e == 49){
-        console.log(direction);
+
     }
 //    if(e ==)
 
@@ -45,3 +45,6 @@ function degInRad(deg) {
     return deg * Math.PI / 180;
 }
 
+function radToDeg(rad){
+    return (rad*180.0) / Math.PI;
+}
