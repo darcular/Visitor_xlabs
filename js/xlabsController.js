@@ -50,23 +50,24 @@ xLabs.webCamController.prototype = {
     },
     update : function(callback){
         if(!this.headX || !this.headY || !this.headZ) return;  //to avoid undefined value
-        console.log(this.roll);
-        if(this.roll > 0.2){
-            this.autoRotate =1;
-        }
-        else if(this.roll < -0.2){
-            this.autoRotate =-1;
-        }
-        else{
-            this.autoRotate = 0;
-        }
-        callback(this.autoRotate);
+
+        callback(mapTOW(this.roll, 0.2, 4));
     }
 }
 
-function smoother(currentValue, targetValue, alpha ){
-    var output;
-    var beta = 1.0 - alpha;
-    output = targetValue * beta + currentValue * alpha === undefined ? 0 : targetValue * beta + currentValue * alpha;
-    return output;
+//function smoother(currentValue, targetValue, alpha ){
+//    var output;
+//    var beta = 1.0 - alpha;
+//    output = targetValue * beta + currentValue * alpha === undefined ? 0 : targetValue * beta + currentValue * alpha;
+//    return output;
+//}
+
+function mapTOW(roll, t, k){
+    var result = 0;
+    if(roll > t)
+        result = k * (roll-t);
+    else if ( roll < -1*t){
+        result = k * (roll+t);
+    }
+    return result;
 }

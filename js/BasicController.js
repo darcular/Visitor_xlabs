@@ -5,7 +5,8 @@ var keyBoardControler = {
     up : false,
     down : false,
     left : false,
-    right : false
+    right : false,
+    chase : false
 }
 
 function onKeyDown(event){
@@ -23,6 +24,24 @@ function onKeyUp(event){
     else if (e == 39 || e == 68) keyBoardControler.right = false;
 }
 
+function onKeyPress(event){
+    var e = event.keyCode;
+    console.log(e);
+    if(e == 13) {
+        keyBoardControler.chase = !keyBoardControler.chase;
+        if(visitor.cameraHelper.visible!=undefined){
+            visitor.cameraHelper.visible = !visitor.cameraHelper.visible;
+            visitor.tubeMaterial.visible = !visitor.tubeMaterial.visible;
+        }
+    }
+    if(e == 49){
+        console.log(direction);
+    }
+//    if(e ==)
+
+}
+
 function degInRad(deg) {
     return deg * Math.PI / 180;
 }
+

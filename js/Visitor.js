@@ -23,7 +23,7 @@ xLabs.Visitor = function(){
     this.width = window.innerWidth;
     this.height = window.innerHeight;
     this.loader = new THREE.OBJMTLLoader();
-    this.building = null;
+    this.parent = new THREE.Object3D();
     this.gui;
     this.importObj;
     this.tubeGeometry;
@@ -37,6 +37,7 @@ xLabs.Visitor.prototype = {
         this.renderer.setSize(this.width,this.height);
         this.container.appendChild(this.renderer.domElement);
         this.scene = new THREE.Scene();
+        this.scene.add(this.parent);
 //        this.scene.add(this.object);
         THREEx.WindowResize(this.renderer, this.camera);
         this.initXLabsController();
@@ -46,8 +47,9 @@ xLabs.Visitor.prototype = {
         this.initSky();
         this.initLight();
         this.initGUI();
-//        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
-        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
+        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
+//        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
+        this.initTrack();
 
 //        this.loadObject('assets/models/car/audi_body.obj', 'assets/models/car/audi_body.mtl');
 
@@ -57,21 +59,23 @@ xLabs.Visitor.prototype = {
         function animation(){
             requestAnimationFrame(animation);
             if(self.startMov)
-//                self.test();
                 self.update();
 //            console.log(self.tubeGeometry);
 //            self.cameraHelper.update();
-            self.renderer.render(self.scene, self.chaseCamera);
+//            self.renderer.render(self.scene, keyBoardControler.chase ? self.chaseCamera : self.camera);
+//            self.renderer.render(self.scene, self.chaseCamera);
         }
+
         animation();
     },
     initCamera : function(){
         this.camera = new THREE.PerspectiveCamera(50, this.width/this.height, 0.1, 30000);
         this.chaseCamera = new THREE.PerspectiveCamera(50, this.width/this.height, 0.1, 30000);
+        this.parent.add(this.chaseCamera);
         this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0));
         this.cameraHelper = new THREE.CameraHelper(this.chaseCamera);
-        this.cameraHelper.visible = false;
-        this.scene.add(this.cameraHelper);
+        this.cameraHelper.visible = true;
+        this.addObject(this.cameraHelper);
 //        console.log(this.scene);
         this.camera.position.set(15,15,15);
         this.camera.lookAt(new THREE.Vector3(0,5,0));
@@ -158,61 +162,73 @@ xLabs.Visitor.prototype = {
         var self = this;
         this.loader = new THREE.OBJMTLLoader();
         this.loader.load(obj_path, mtll_path, function(object){
-            var path = object.getObjectByName("CAMERAPATH_Mesh");
-            console.log(path);
-            path.traverse(function(child){
-                if(child instanceof THREE.Mesh){
-                    console.log(child.geometry.vertices);
-                    self.cameraTrack = new THREE.ClosedSplineCurve3([new THREE.Vector3(0.53,0.78,-0.27),
-                        new THREE.Vector3(-1.15,0.78,0.28),new THREE.Vector3(-16.67,0.78,0.28),new THREE.Vector3(-18.61,0.78,-0.27),new THREE.Vector3(-19.22,0.78,-4.04),
-                        new THREE.Vector3(-20.00,0.78,-30.39),new THREE.Vector3(-19.57,0.78,-34.71),new THREE.Vector3(-16.60,0.78,-35.37),new THREE.Vector3(-2.16,0.78,-35.37),
-                        new THREE.Vector3(1.18,0.78,-34.78),new THREE.Vector3(1.65,0.78,-30.43),new THREE.Vector3(1.32,0.78,-4.04), new THREE.Vector3(0.53,0.78,-0.27)]);   //child.geometry.vertices
-                    self.tubeGeometry = new THREE.TubeGeometry(self.cameraTrack, 50, 1, 1, false);
-                    var tubeMaterial = new THREE.MeshBasicMaterial({color:0x000000,wireframe:true});
-//                    tubeMaterial.visible=false;
-                    self.tube = new THREE.Mesh(self.tubeGeometry, tubeMaterial);
-                   self.addObject(self.tube);
-                }
-            });
             self.addObject(object);
             self.startMov = true;
         });
     },
+    initTrack : function(){
+        this.cameraTrack = new THREE.ClosedSplineCurve3([
+            new THREE.Vector3(-1.65,0.78,0.28),
+            new THREE.Vector3(-14.67,0.78,0.28),new THREE.Vector3(-19.22,0.78,-4.04),
+            new THREE.Vector3(-20.00,0.78,-30.39),new THREE.Vector3(-16.60,0.78,-35.37),
+            new THREE.Vector3(-2.16,0.78,-35.37),new THREE.Vector3(1.65,0.78,-30.43),
+            new THREE.Vector3(1.32,0.78,-4.54)]);
+        this.tubeGeometry = new THREE.TubeGeometry(this.cameraTrack, 50, 1, 2, true);
+        this.tubeMaterial = new THREE.MeshBasicMaterial({color:0xFF3300,wireframe:true});
+        this.tubeMaterial.visible=true;
+        this.tube = new THREE.Mesh(this.tubeGeometry, this.tubeMaterial);
+        this.addObject(this.tube);
+//        this.startMov = true;
+    },
     initBasicController : function () {
         window.addEventListener('keyup', function(event) { onKeyUp(event); }, false);
         window.addEventListener('keydown', function(event) { onKeyDown(event); }, false);
+        window.addEventListener('keypress', function(event) { onKeyPress(event); });
     },
     update : function(){
+//        var ratio = (Math.cos(degInRad(2*customRotation))+1)/2;
+        var ratio = Math.cos(degInRad(customRotation));
+        t += j*ratio;
+        if(t>1) t-=1;
+        if(t<0) t+=1;
         var self = this;
-        var time = Date.now();
-        var looptime = 200 * 1000;
-        var t = ( time % looptime ) / looptime;
+//        var time = Date.now();
+//        var looptime = 40 * 1000;
+//        var t = ( time % looptime ) / looptime;
+//        console.log(customRotation);
+//        console.log((Math.cos(degInRad(2*customRotation))+1)/2);
+//        if(keyBoardControler.up)
+//            t=0;
+//        var t = (( time % looptime ) / looptime)*(Math.sin(degInRad(90+customRotation))+1)/2;
+
+//        console.log(j);
         var pos = this.tubeGeometry.parameters.path.getPointAt( t );
         pos.y += 1.1;
         this.chaseCamera.position.copy(pos);
-        var direction = this.tubeGeometry.parameters.path.getTangentAt(t);
-
-
-
+        direction = this.tubeGeometry.parameters.path.getTangentAt(t);
+        this.chaseCamera.lookAt(pos.add(direction));
+        this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(customRotation));
+//        this.chaseCamera.lookAt(pos.add(direction));
         this.cameraHelper.update();
+
         if(keyBoardControler.left)
-            this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(1));
+            customRotation += 1;
+//            this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(1));
         if(keyBoardControler.right)
-            this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(-1));
+            customRotation -=1;
+//            this.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(-1));
         if(keyBoardControler.up){
             console.log(this.tubeGeometry.parameters.path.getTangentAt(t));
+            j+=0.00001;
         }
         if(keyBoardControler.down){
-            console.log(this.tubeGeometry.parameters.path);
+//            console.log(this.tubeGeometry.parameters.path);
+            j-=0.00001;
         }
-        this.xLabsController.update(function(rotate){
-            if(rotate==1){
-                self.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(1));
-            }
-            else if (rotate==-1){
-                self.chaseCamera.rotateOnAxis(new THREE.Vector3(0, 1, 0), degInRad(-1));
-            }
+        this.xLabsController.update(function(result){
+            customRotation+=result;
         });
+        this.renderer.render(self.scene, keyBoardControler.chase ? self.chaseCamera : self.camera);
     },
     addObject : function(object){
         this.scene.add(object);
@@ -300,3 +316,8 @@ function onFileChange(event){
     console.log(objFile);
     console.log(mtlFile);
 }
+
+var direction;
+var customRotation = 0;
+var t = 0.0;
+var j = 0.0005;
