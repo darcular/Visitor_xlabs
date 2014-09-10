@@ -58,7 +58,7 @@ xLabs.webCamController.prototype = {
             w = mapTOW(this.headX, 1.5, 1);
 
         var p = 0;
-        p = mapTOP(this.pitch, 0.57, 0.80, 0.1);
+        p = mapTOP(this.pitch, 0.57, 0.80, 0.3);
 
         callback(w, p);
     }
