@@ -23,6 +23,10 @@ xLabs.webCamController = function(){
 }
 
 xLabs.webCamController.prototype = {
+
+	yawSmooth : 0,
+	xSmooth : 0,
+
     onApiState : function(state){
         if(!xLabs.isCamOn && state.kvRealtimeActive == 1){xLabs.isCamOn = true;}
         this.headX = state.kvHeadX;
@@ -49,14 +53,32 @@ xLabs.webCamController.prototype = {
     update : function(callback){
         if(!this.headX || !this.headY || !this.headZ) return;  //to avoid undefined value
 //        console.log(this.pitch);
+		// mode:
+		// 0 -- roll
+		// 0 -- yaw
+		// 0 -- head x
         var w = 0;
-        if(xLabs.mode===0)
-            w = mapTOW(this.roll, 0.17, 5);
-        else if(xLabs.mode===1)
-            w = mapTOW(this.yaw, 0.12, 6);
-        else if(xLabs.mode===2)
-            w = mapTOW(this.headX, 1.5, 1);
-
+        if(xLabs.mode===0) {
+//            w = mapIntoW(this.roll, 0.17, 5);
+		}
+        else if(xLabs.mode===1) {
+			var alpha = 0.9;
+			this.yawSmooth = this.yawSmooth * alpha + (1-alpha) * this.yaw;
+			var gain = 8;
+			var yawMin = 0.04;
+			var yawMax = 0.1;
+			console.log( "this.yawSmooth: " + this.yawSmooth );
+            w = mapIntoW( this.yawSmooth, gain, yawMin, yawMax );
+		}
+        else if(xLabs.mode===2) {
+			var alpha = 0.5;
+			this.xSmooth = this.xSmooth * alpha + (1-alpha) * this.headX;
+			var gain = 1.0;
+			var xMin = 0.2;
+			var xMax = 1.5;
+			console.log( "this.xSmooth: " + this.xSmooth );
+            w = mapIntoW( this.xSmooth, gain, xMin, xMax );
+		}
         var p = 0;
         p = mapTOP(this.pitch, 0.57, 0.80, 0.3);
 
@@ -64,13 +86,18 @@ xLabs.webCamController.prototype = {
     }
 }
 
-function mapTOW(input, t, k){
-    var result = 0;
-    if(input > t)
-        result = k * (input-t);
-    else if ( input < -1*t)
-        result = k * (input+t);
-    return result;
+function mapIntoW( _src, gain, srcMin, srcMax ) {
+	var w = 0;
+	var src = _src;
+
+	if( src >  srcMax ) src =  srcMax;
+	if( src < -srcMax ) src = -srcMax;
+	
+	if( src >  srcMin ) w = (src - srcMin) * gain;
+	if( src < -srcMin ) w = (src + srcMin) * gain;
+	
+//	console.log( "w:" + w );
+	return w;
 }
 
 function mapTOP(input, t1, t2, k){

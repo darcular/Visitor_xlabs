@@ -176,7 +176,7 @@ xLabs.Visitor.prototype = {
         this.tubeMaterial.visible=true;
         this.tube = new THREE.Mesh(this.tubeGeometry, this.tubeMaterial);
         this.addObject(this.tube);
-//        this.startMov = true;
+        this.startMov = true;
     },
     initBasicController : function () {
         window.addEventListener('keyup', function(event) { onKeyUp(event); }, false);
@@ -186,7 +186,7 @@ xLabs.Visitor.prototype = {
     update : function(){
         var self = this;
         var ratio = Math.cos(movDirection.angleTo(camDirection));
-        console.log(movDirection.angleTo(camDirection));
+//        console.log(movDirection.angleTo(camDirection));
         var lastCamDir = this.tubeGeometry.parameters.path.getTangentAt(t);
         t += j*ratio;
         if(t>1) t -= 1;
@@ -237,7 +237,7 @@ xLabs.Visitor.prototype = {
             a: function() {xLabs.mode=0;},
             b: function() {xLabs.mode=1;},
             c: function() {xLabs.mode=2;},
-            pitch: true,
+            pitch: false,
             autoRotation: true
         };
         this.gui.add( this.modeSelection, 'a' ).name('Roll Mode (D)');
@@ -253,5 +253,5 @@ var movDirection = new THREE.Vector3(1,0,0);
 var camDirection = new THREE.Vector3(1,0,0);
 var customRotation = 0, customRotationUp = 0;
 var t = 0.0;
-var j = 0.00035; //0.00035
+var j = 0.00030; //0.00035
 var x=0;
