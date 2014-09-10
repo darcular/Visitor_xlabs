@@ -50,7 +50,7 @@ xLabs.Visitor.prototype = {
         this.initSky();
         this.initLight();
 //        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
-//        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
+        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
         this.initTrack();
     },
     start : function(){
@@ -164,6 +164,7 @@ xLabs.Visitor.prototype = {
         var self = this;
         this.loader = new THREE.OBJMTLLoader();
         this.loader.load(obj_path, mtll_path, function(object){
+            object.rotation.x = degInRad(-1);
             self.addObject(object);
             self.startMov = true;
         });
