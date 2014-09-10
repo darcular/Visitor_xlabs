@@ -29,6 +29,9 @@ xLabs.webCamController.prototype = {
 	yawSmooth : 0,
 	xSmooth : 0,
 	ySmooth : 0,
+	
+	pitchEventTimeMsec : 0,
+	deltaPitch : 0,
 
 	pitchSignals : [],
 
@@ -85,9 +88,7 @@ xLabs.webCamController.prototype = {
 			console.log( "this.xSmooth: " + this.xSmooth );
             w = mapIntoW( this.xSmooth, gain, xMin, xMax );
 		}
-        var p = 0;
-        //p = mapTOP(this.pitch, 0.57, 0.80, 0.3);
-
+		
 		// Control pitch
 		{
 			var alpha = 0.5;
@@ -95,25 +96,34 @@ xLabs.webCamController.prototype = {
 			
 			// Maintain a buffer of pitch signals
 			this.pitchSignals.push( this.ySmooth );
-			if( this.pitchSignals.length > 30 ) {
+			if( this.pitchSignals.length > 100 ) {
 				this.pitchSignals.shift();
 			}
 			
 			// Get the median value as a reference
 			var pitchRef  = median( this.pitchSignals );
 			var pitchSig = this.ySmooth - pitchRef;
-			var pitchThresh = 0.1;
+			var pitchThresh = 0.4;
 			console.log( "pitchSig: " + pitchSig );
-			if( pitchSig > pitchThresh ) {
-				p = 20;
+			var nowMsec = new Date().getTime();
+			if( nowMsec - this.pitchEventTimeMsec > 500 ) {
+				if( pitchSig > pitchThresh ) {
+					this.deltaPitch = -0.5;
+					this.pitchEventTimeMsec = new Date().getTime();
+				}
+				else if( pitchSig < -pitchThresh ) {
+					this.deltaPitch = 0.5;
+					this.pitchEventTimeMsec = new Date().getTime();
+				}
+				else {
+					this.deltaPitch = 0;
+				}
+
 			}
-			else if( pitchSig < pitchThresh ) {
-				p = -20;
-			}
-			p = 10;
+//			p = 10;
 		}		
 
-        callback(w, p);
+        callback(w, this.deltaPitch);
     }
 }
 

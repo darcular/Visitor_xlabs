@@ -164,6 +164,7 @@ xLabs.Visitor.prototype = {
         var self = this;
         this.loader = new THREE.OBJMTLLoader();
         this.loader.load(obj_path, mtll_path, function(object){
+            object.rotation.x = degInRad(-1);
             self.addObject(object);
             self.startMov = true;
         });
@@ -198,8 +199,8 @@ xLabs.Visitor.prototype = {
         pos.y += 1.1;
 		
 		// Bobbing ???
-		var dy = Math.sin( 2 * Math.PI * t * 150 ) * 0.01;
-		var dx = Math.sin( 2 * Math.PI * t * 150 ) * 0.01;
+		var dy = Math.sin( 2 * Math.PI * t * 120 ) * 0.007;
+		var dx = Math.sin( 2 * Math.PI * t * 120 ) * 0.01;
 		pos.y += dy;
 		pos.x += dx;
 		
@@ -208,17 +209,37 @@ xLabs.Visitor.prototype = {
 
         x = (new THREE.Vector3(-1,0,0)).angleTo(movDirection);
         if(this.modeSelection.autoRotation){
-//            customRotation += ;
+            var th0 = Math.atan2( lastMovDir.x, lastMovDir.z );
+            var th1 = Math.atan2( movDirection.x, movDirection.z );
+            var dth = th1-th0;
+            if( dth >  Math.PI ) dth -= 2*Math.PI;
+            if( dth <= Math.PI ) dth += 2*Math.PI;
+            customRotation += radToDeg(dth);
+//            customRotation -= radToDeg(lastMovDir.angleTo(movDirection));
+//            this.cameraBox.lookAt(this.cameraBox.position.add(new THREE.Vector3(1,0,0)));
+//            console.log(this.cameraBox.position.add(new THREE.Vector3(1,0,0)));
+//            var diff = new THREE.Vector3(-1,0,0).angleTo(movDirection);
+//            var v1 = new THREE.Vector3(-1,0,0);
+//            var v2 = new THREE.Vector3(0,0,-1)
+//            console.log((new THREE.Vector3(1,0,0)).angleTo(new THREE.Vector3(1,-1,0)));
+//            console.log(Math.atan2(v1.x, v1.z));
+//            console.log(Math.atan2(v2.x, v2.z));
             this.cameraBox.rotation.y=degInRad(customRotation);
+
+
 //            this.chaseCamera.rotation.z = degInRad(customRotationUp);
+
             this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0).applyEuler(new THREE.Euler(0,0,-degInRad(customRotationUp))));
 
 //            this.chaseCamera.lookAt(pos.add((new THREE.Vector3(-1,0,0)).applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
 //            this.chaseCamera.lookAt(pos.add(movDirection.applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
         }
-        else
+        else{
+            this.cameraBox.rotation.y=degInRad(customRotation);
+            this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0).applyEuler(new THREE.Euler(0,0,-degInRad(customRotationUp))));
+        }
 //            this.chaseCamera.lookAt(pos.add((new THREE.Vector3(-1,0,0)).applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
-        console.log(radToDeg(x));
+//        console.log(radToDeg(x));
         //control part
         if(keyBoardControler.left){
             customRotation += 1;
@@ -235,7 +256,7 @@ xLabs.Visitor.prototype = {
             if(self.modeSelection.pitch)
                 customRotationUp += p;
         });
-
+        lastMovDir = movDirection;
         movDirection = this.tubeGeometry.parameters.path.getTangentAt(t);
         camDirection = new THREE.Vector3(-1,0,0).applyEuler(this.cameraBox.rotation);
         this.cameraHelper.update();
@@ -251,7 +272,7 @@ xLabs.Visitor.prototype = {
             a: function() {xLabs.mode=0;},
             b: function() {xLabs.mode=1;},
             c: function() {xLabs.mode=2;},
-            pitch: false,
+            pitch: true,
             autoRotation: true
         };
         this.gui.add( this.modeSelection, 'a' ).name('Roll Mode (D)');
@@ -263,10 +284,10 @@ xLabs.Visitor.prototype = {
     }
 }
 
-var movDirection = new THREE.Vector3(1,0,0);
-var camDirection = new THREE.Vector3(1,0,0);
-var lastMovDir;
-var customRotation = 0, customRotationUp = 0;
+var movDirection = new THREE.Vector3(-1,0,0);
+var camDirection = new THREE.Vector3(-11,0,0);
+var lastMovDir = new THREE.Vector3(-1,0,0);
+var customRotation = 0, customRotationUp = 0, customRotation2 = 0;
 var t = 0.0;
-var j = 0.00030; //0.00035
+var j = 0.00035; //0.00035
 var x=0;
