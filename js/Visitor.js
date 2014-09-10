@@ -49,7 +49,7 @@ xLabs.Visitor.prototype = {
         this.initGround();
         this.initSky();
         this.initLight();
-//        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
+        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
 //        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
         this.initTrack();
     },
@@ -196,12 +196,19 @@ xLabs.Visitor.prototype = {
         if(t<0) t += 1;
         var pos = this.tubeGeometry.parameters.path.getPointAt(t);
         pos.y += 1.1;
+		
+		// Bobbing ???
+		var dy = Math.sin( 2 * Math.PI * t * 100 ) * 0.007;
+		//var dx = Math.sin( 2 * Math.PI * t * 100 ) * 0.007;
+		pos.y += dy;	
+		//pos.x += dx;	
+		
         this.cameraBox.position.copy(pos);
 //        var d = radToDeg(lastCamDir.angleTo(movDirection));
 
         x = (new THREE.Vector3(-1,0,0)).angleTo(movDirection);
         if(this.modeSelection.autoRotation){
-            customRotation += ;
+//            customRotation += ;
             this.cameraBox.rotation.y=degInRad(customRotation);
 //            this.chaseCamera.rotation.z = degInRad(customRotationUp);
             this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0).applyEuler(new THREE.Euler(0,0,-degInRad(customRotationUp))));
