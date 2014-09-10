@@ -198,10 +198,10 @@ xLabs.Visitor.prototype = {
         pos.y += 1.1;
 		
 		// Bobbing ???
-		var dy = Math.sin( 2 * Math.PI * t * 100 ) * 0.007;
-		//var dx = Math.sin( 2 * Math.PI * t * 100 ) * 0.007;
-		pos.y += dy;	
-		//pos.x += dx;	
+		var dy = Math.sin( 2 * Math.PI * t * 150 ) * 0.01;
+		var dx = Math.sin( 2 * Math.PI * t * 150 ) * 0.01;
+		pos.y += dy;
+		pos.x += dx;
 		
         this.cameraBox.position.copy(pos);
 //        var d = radToDeg(lastCamDir.angleTo(movDirection));
