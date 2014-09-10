@@ -109,14 +109,15 @@ xLabs.Visitor.prototype = {
         this.scene.add( directionalLight );
     },
     initGround : function(){
-        var floorTexture = new THREE.ImageUtils.loadTexture( 'assets/image/checkerboard.jpg' );
+//        var floorTexture = new THREE.ImageUtils.loadTexture( 'assets/image/checkerboard.jpg' );
+        var floorTexture = new THREE.ImageUtils.loadTexture( 'assets/image/Pavement-texture_small.jpg' );
         floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-        floorTexture.repeat.set( 10, 10 );
+        floorTexture.repeat.set( 100, 100 );
         // DoubleSide: render texture on both sides of mesh
         var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
-        var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
+        var floorGeometry = new THREE.PlaneGeometry(10000, 10000, 1, 1);
         this.ground = new THREE.Mesh(floorGeometry, floorMaterial);
-        this.ground.scale.set(0.5,0.5,0.5);
+        this.ground.scale.set(0.01,0.01,0.01 );
         this.ground.rotation.x = Math.PI / 2;
         this.ground.position.set(0, -0.5, 0);
         this.scene.add(this.ground);
@@ -272,7 +273,7 @@ xLabs.Visitor.prototype = {
             a: function() {xLabs.mode=0;},
             b: function() {xLabs.mode=1;},
             c: function() {xLabs.mode=2;},
-            pitch: true,
+            pitch: false,
             autoRotation: true
         };
         this.gui.add( this.modeSelection, 'a' ).name('Roll Mode (D)');
