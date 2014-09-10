@@ -29,6 +29,7 @@ xLabs.Visitor = function(){
     this.tubeGeometry;
     this.cameraHelper;
     this.modeSelection;
+    this.cameraBox;
 }
 
 xLabs.Visitor.prototype = {
@@ -48,7 +49,7 @@ xLabs.Visitor.prototype = {
         this.initGround();
         this.initSky();
         this.initLight();
-        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
+//        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
 //        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
         this.initTrack();
     },
@@ -69,7 +70,10 @@ xLabs.Visitor.prototype = {
     initCamera : function(){
         this.camera = new THREE.PerspectiveCamera(50, this.width/this.height, 0.1, 30000);
         this.chaseCamera = new THREE.PerspectiveCamera(50, this.width/this.height, 0.1, 30000);
-        this.parent.add(this.chaseCamera);
+        this.cameraBox = new THREE.Object3D();
+//        this.cameraBox.applyMatrix(new THREE.Matrix4().makeRotationY(0));
+        this.cameraBox.add(this.chaseCamera);
+        this.parent.add(this.cameraBox);
         this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0));
         this.cameraHelper = new THREE.CameraHelper(this.chaseCamera);
         this.cameraHelper.visible = true;
@@ -176,7 +180,7 @@ xLabs.Visitor.prototype = {
         this.tubeMaterial.visible=true;
         this.tube = new THREE.Mesh(this.tubeGeometry, this.tubeMaterial);
         this.addObject(this.tube);
-//        this.startMov = true;
+        this.startMov = true;
     },
     initBasicController : function () {
         window.addEventListener('keyup', function(event) { onKeyUp(event); }, false);
@@ -186,28 +190,28 @@ xLabs.Visitor.prototype = {
     update : function(){
         var self = this;
         var ratio = Math.cos(movDirection.angleTo(camDirection));
-        console.log(movDirection.angleTo(camDirection));
-        var lastCamDir = this.tubeGeometry.parameters.path.getTangentAt(t);
+//        var lastCamDir = this.tubeGeometry.parameters.path.getTangentAt(t);
         t += j*ratio;
         if(t>1) t -= 1;
         if(t<0) t += 1;
         var pos = this.tubeGeometry.parameters.path.getPointAt(t);
         pos.y += 1.1;
-        this.chaseCamera.position.copy(pos);
-        movDirection = this.tubeGeometry.parameters.path.getTangentAt(t);
-        camDirection = new THREE.Vector3(0,0,-1).applyEuler(this.chaseCamera.rotation);
+        this.cameraBox.position.copy(pos);
+//        var d = radToDeg(lastCamDir.angleTo(movDirection));
 
-        var d = radToDeg(lastCamDir.angleTo(movDirection));
-
+        x = (new THREE.Vector3(-1,0,0)).angleTo(movDirection);
         if(this.modeSelection.autoRotation){
-//            this.chaseCamera.lookAt(pos.add((new THREE.Vector3(-1,0,0)).applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
+            customRotation += ;
+            this.cameraBox.rotation.y=degInRad(customRotation);
+//            this.chaseCamera.rotation.z = degInRad(customRotationUp);
+            this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0).applyEuler(new THREE.Euler(0,0,-degInRad(customRotationUp))));
 
-            this.chaseCamera.lookAt(pos.add(movDirection.applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
-            x = (new THREE.Vector3(-1,0,0)).angleTo(movDirection);
+//            this.chaseCamera.lookAt(pos.add((new THREE.Vector3(-1,0,0)).applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
+//            this.chaseCamera.lookAt(pos.add(movDirection.applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
         }
         else
-            this.chaseCamera.lookAt(pos.add((new THREE.Vector3(-1,0,0)).applyEuler(new THREE.Euler(0,degInRad(customRotation)-x,-degInRad(customRotationUp)))));
-
+//            this.chaseCamera.lookAt(pos.add((new THREE.Vector3(-1,0,0)).applyEuler(new THREE.Euler(0,degInRad(customRotation),-degInRad(customRotationUp)))));
+        console.log(radToDeg(x));
         //control part
         if(keyBoardControler.left){
             customRotation += 1;
@@ -224,6 +228,9 @@ xLabs.Visitor.prototype = {
             if(self.modeSelection.pitch)
                 customRotationUp += p;
         });
+
+        movDirection = this.tubeGeometry.parameters.path.getTangentAt(t);
+        camDirection = new THREE.Vector3(-1,0,0).applyEuler(this.cameraBox.rotation);
         this.cameraHelper.update();
         this.renderer.render(self.scene, keyBoardControler.chase ? self.chaseCamera : self.camera);
     },
@@ -251,6 +258,7 @@ xLabs.Visitor.prototype = {
 
 var movDirection = new THREE.Vector3(1,0,0);
 var camDirection = new THREE.Vector3(1,0,0);
+var lastMovDir;
 var customRotation = 0, customRotationUp = 0;
 var t = 0.0;
 var j = 0.00035; //0.00035
