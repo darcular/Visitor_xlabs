@@ -43,7 +43,7 @@ xLabs.webCamController.prototype = {
         this.roll = state.kvHeadRoll;
         this.pitch = state.kvHeadPitch;
         this.yaw = state.kvHeadYaw;
-        this.isFaceDetected = state.kvValidationErrors[0]=="F" ? false : true;
+        this.isFaceDetected = state.kvValidationErrors.indexOf("F") == -1 ? true : false;
     },
     onApiReady : function(){
         xLabs.isXlabReady = true;
@@ -60,7 +60,14 @@ xLabs.webCamController.prototype = {
     },
 	
     update : function(callback){
-        if(!this.headX || !this.headY || !this.headZ) return;  //to avoid undefined value
+		var walkSpeed = 0.00035;
+		
+		console.log( "this.isFaceDetected: " + this.isFaceDetected );
+        if( !this.isFaceDetected ) {
+			walkSpeed = 0;			
+			callback( 0, 0,  walkSpeed );
+			return;
+		}
 //        console.log(this.pitch);
 		// mode:
 		// 0 -- roll
@@ -123,7 +130,7 @@ xLabs.webCamController.prototype = {
 //			p = 10;
 		}		
 
-        callback(w, this.deltaPitch);
+        callback(w, this.deltaPitch,  walkSpeed);
     }
 }
 

@@ -6,7 +6,12 @@ var xLabs = xLabs || {};
 var normal = new THREE.Vector3();
 var binormal = new THREE.Vector3();
 
+// Constants
+var pitchResetMsec = 5000;
+
 xLabs.Visitor = function(){
+
+	// var
     this.startMov = false;
     this.container = null;
     this.camera = null;
@@ -30,6 +35,7 @@ xLabs.Visitor = function(){
     this.cameraHelper;
     this.modeSelection;
     this.cameraBox;
+	this.lastPitchChangeMsec = new Date().getTime();
 }
 
 xLabs.Visitor.prototype = {
@@ -49,7 +55,7 @@ xLabs.Visitor.prototype = {
         this.initGround();
         this.initSky();
         this.initLight();
-        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
+//        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
 //        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
         this.initTrack();
     },
@@ -191,7 +197,15 @@ xLabs.Visitor.prototype = {
     },
     update : function(){
         var self = this;
-        var ratio = Math.cos(movDirection.angleTo(camDirection));
+		
+		// Stop moving when facing the wall ???
+		var cameraAngle = movDirection.angleTo(camDirection);		
+		var cameraAngleDeg = cameraAngle*180/Math.PI;
+        var ratio = Math.cos(cameraAngle);
+		var zeroRange = 30;
+		if( cameraAngleDeg >  zeroRange && cameraAngleDeg <  90 + zeroRange ) ratio = 0;
+		if( cameraAngleDeg < -zeroRange && cameraAngleDeg > -90 - zeroRange ) ratio = 0;
+		
 //        var lastCamDir = this.tubeGeometry.parameters.path.getTangentAt(t);
         t += j*ratio;
         if(t>1) t -= 1;
@@ -252,10 +266,25 @@ xLabs.Visitor.prototype = {
             customRotationUp += 1;
         if(keyBoardControler.down)
             customRotationUp -= 1;
-        this.xLabsController.update(function(w, p){
+        this.xLabsController.update(function(w, p, v){ //???
+			j = v; // change walking speed
             customRotation += w;
-            if(self.modeSelection.pitch)
-                customRotationUp += p;
+            if(self.modeSelection.pitch) customRotationUp += p;
+			
+			var nowMsec = new Date().getTime();
+			if( p != 0 ) {
+				xLabs.Visitor.lastPitchChangeMsec = nowMsec;
+			}
+			
+			console.log( nowMsec );
+			console.log( xLabs.Visitor.lastPitchChangeMsec );
+			console.log( pitchResetMsec );
+			if(    nowMsec - xLabs.Visitor.lastPitchChangeMsec > pitchResetMsec ) {
+				var step = 1;
+                if( customRotationUp >  step ) customRotationUp -= step;
+                if( customRotationUp < -step ) customRotationUp += step;
+			}
+
         });
         lastMovDir = movDirection;
         movDirection = this.tubeGeometry.parameters.path.getTangentAt(t);
@@ -290,5 +319,5 @@ var camDirection = new THREE.Vector3(-11,0,0);
 var lastMovDir = new THREE.Vector3(-1,0,0);
 var customRotation = 0, customRotationUp = 0, customRotation2 = 0;
 var t = 0.0;
-var j = 0.00035; //0.00035
+var j = 0; //0.00035; //0.00035
 var x=0;
