@@ -55,7 +55,7 @@ xLabs.Visitor.prototype = {
         this.initGround();
         this.initSky();
         this.initLight();
-//        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
+        this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
 //        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
         this.initTrack();
     },
