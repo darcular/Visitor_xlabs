@@ -7,7 +7,7 @@ var normal = new THREE.Vector3();
 var binormal = new THREE.Vector3();
 
 // Constants
-var pitchResetMsec = 5000;
+var pitchResetMsec = 3500;
 
 xLabs.Visitor = function(){
 
