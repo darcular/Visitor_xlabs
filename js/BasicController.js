@@ -6,7 +6,7 @@ var keyBoardControler = {
     down : false,
     left : false,
     right : false,
-    chase : false
+    chase : true
 }
 
 function onKeyDown(event){

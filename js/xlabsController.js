@@ -2,6 +2,23 @@
  * @author Yikai Gong
  */
 
+// constants
+var faceDetectedAlpha  = 0.7;
+var faceDetectedThresh = 0.3;
+
+// Mark and space time for showing display
+var displayHelpMarkMsec = 1000;
+var displayHelpSpaceMsec = 15000;
+var displayHelpWhenNoFace = true;
+
+var maxWalkSpeed = 0.00035;
+
+// For pitch control
+var ySmoothAlpha = 0.5;
+var pitchSignalsMaxLength = 50; // the length of the face y position buffer, the median of this buffer is the reference
+var pitchSignalLockoutMsec = 1500; // amount of time to ignore other pitch events after a pitch even have occured
+var pitchNumUpdates = 30; // controls the amount of pitch per pitch event, larger means more pitch movement
+ 
 var xLabs= xLabs || {};
 xLabs.isXlabReady = false;
 xLabs.isCamOn = false;
@@ -22,19 +39,28 @@ xLabs.webCamController = function(){
     })
 }
 
-
-
 xLabs.webCamController.prototype = {
 
+	// variables
 	yawSmooth : 0,
 	xSmooth : 0,
 	ySmooth : 0,
 	
+	targetPitchRate : 0,	
+	pitchUpdateCnt : 0, // counts the number of updates so we can control the amount of pitch
 	pitchEventTimeMsec : 0,
-	deltaPitch : 0,
-
 	pitchSignals : [],
-
+	
+	CONTROL_MODE_ROLL : 0,
+	CONTROL_MODE_YAW : 1,
+	CONTROL_MODE_X : 2,
+	
+	helpOverlay : null,
+	faceDetections : 0,
+	isFaceDetected : 0,
+	lastHelpTimeMsec : 0,
+	
+	
     onApiState : function(state){
         if(!xLabs.isCamOn && state.kvRealtimeActive == 1){xLabs.isCamOn = true;}
         this.headX = state.kvHeadX;
@@ -43,7 +69,9 @@ xLabs.webCamController.prototype = {
         this.roll = state.kvHeadRoll;
         this.pitch = state.kvHeadPitch;
         this.yaw = state.kvHeadYaw;
-        this.isFaceDetected = state.kvValidationErrors.indexOf("F") == -1 ? true : false;
+		var f = state.kvValidationErrors.indexOf("F") == -1 ? 1 : 0;
+		this.faceDetections = this.faceDetections * faceDetectedAlpha + (1-faceDetectedAlpha) * f;
+        this.isFaceDetected = this.faceDetections > faceDetectedThresh;
     },
     onApiReady : function(){
         xLabs.isXlabReady = true;
@@ -58,13 +86,55 @@ xLabs.webCamController.prototype = {
             window.postMessage({target:"xLabs", payload:{realtimeEnabled:0}}, "*");
         }
     },
+
+	setOpacityWithFade : function( element, targetOpacity, step ) {
+		var opacity = parseFloat( element.style.opacity );
+		
+		opacity = smoothAcc( opacity, targetOpacity, step );
+		element.style.opacity = opacity;
+		
+		if( opacity == 0 ) {
+			element.style.visibility = "hidden";
+		}
+		else {
+			element.style.visibility = "visible";
+		}
+	},	
+	showHelp : function(faceDetected){
+		if( !this.helpOverlay ) {
+			this.helpOverlay = document.getElementById('help_overlay');
+		}
+
+		// Logic to displaying help
+		var now = new Date().getTime();
+		var setVisible = 0;
+		if( displayHelpWhenNoFace && !faceDetected ) {
+			setVisible = 1;
+			this.lastHelpTimeMsec = now;
+		}
+		else {
+			if( now - this.lastHelpTimeMsec > displayHelpSpaceMsec ) {
+				setVisible = 1;
+			}
+			if( now - this.lastHelpTimeMsec > displayHelpSpaceMsec + displayHelpMarkMsec ) {
+				setVisible = 0;
+				this.lastHelpTimeMsec = now;
+			}
+		}
+		
+		// Fade in
+		if( setVisible ) this.setOpacityWithFade( this.helpOverlay, 0.7, 0.05 );
+		else 			 this.setOpacityWithFade( this.helpOverlay, 0.0, 0.05 );		
+	},	
 	
     update : function(callback){
-		var walkSpeed = 0.00035;
-		
+		var walkSpeed = maxWalkSpeed;
+	
+		this.showHelp( this.isFaceDetected );
+
 //		console.log( "this.isFaceDetected: " + this.isFaceDetected );
 //  	  console.log( "this.headZ: " + this.headZ );
-      if( !this.isFaceDetected ) {
+		if( !this.isFaceDetected ) {
 			walkSpeed = 0;			
 			callback( 0, 0,  walkSpeed );
 			return;
@@ -74,37 +144,36 @@ xLabs.webCamController.prototype = {
 		// 0 -- roll
 		// 0 -- yaw
 		// 0 -- head x
-        var w = 0;
-        if(xLabs.mode===0) {
-//            w = mapIntoW(this.roll, 0.17, 5);
+        var yawRate = 0;
+        if(xLabs.mode===this.CONTROL_MODE_ROLL) {
+//            yawRate = mapIntoW(this.roll, 0.17, 5);
 		}
-        else if(xLabs.mode===1) {
+        else if(xLabs.mode===this.CONTROL_MODE_YAW) {
 			var alpha = 0.9;
 			this.yawSmooth = this.yawSmooth * alpha + (1-alpha) * this.yaw;
 			var gain = 16;
 			var yawMin = 0.04;
 			var yawMax = 0.1;
 			//console.log( "this.yawSmooth: " + this.yawSmooth );
-            w = mapIntoW( this.yawSmooth, gain, yawMin, yawMax );
+            yawRate = mapIntoW( this.yawSmooth, gain, yawMin, yawMax );
 		}
-        else if(xLabs.mode===2) {
+        else if(xLabs.mode===this.CONTROL_MODE_X) {
 			var alpha = 0.5;
 			this.xSmooth = this.xSmooth * alpha + (1-alpha) * this.headX;
 			var gain = 1.0*0.75;
 			var xMin = 0.2*0.75;
 			var xMax = 1.5*0.75;
 			//console.log( "this.xSmooth: " + this.xSmooth );
-            w = mapIntoW( this.xSmooth, gain, xMin, xMax );
+            yawRate = mapIntoW( this.xSmooth, gain, xMin, xMax );
 		}
-		
+	
 		// Control pitch
 		{
-			var alpha = 0.5;
-			this.ySmooth = this.ySmooth * alpha + (1-alpha) * this.headY;
+			this.ySmooth = this.ySmooth * ySmoothAlpha + (1- ySmoothAlpha) * this.headY;
 			
 			// Maintain a buffer of pitch signals
 			this.pitchSignals.push( this.ySmooth );
-			if( this.pitchSignals.length > 50 ) {
+			if( this.pitchSignals.length > pitchSignalsMaxLength ) {
 				this.pitchSignals.shift();
 			}
 			
@@ -114,24 +183,36 @@ xLabs.webCamController.prototype = {
 			var pitchThresh = 0.25;
 //			console.log( "pitchSig: " + pitchSig );
 			var nowMsec = new Date().getTime();
-			if( nowMsec - this.pitchEventTimeMsec > 500 ) {
+			
+			// No more pitch event within the lockout period just after a pitch event
+			if( nowMsec - this.pitchEventTimeMsec > pitchSignalLockoutMsec ) {
+				var pitchRate = 0;
+				
 				if( pitchSig > pitchThresh ) {
-					this.deltaPitch = -0.8;
-					this.pitchEventTimeMsec = new Date().getTime();
+					pitchRate = -0.8;
 				}
 				else if( pitchSig < -pitchThresh ) {
-					this.deltaPitch = 0.8;
+					pitchRate = 0.8;
+				}
+				
+				if( pitchRate != 0 ) {				
 					this.pitchEventTimeMsec = new Date().getTime();
+					this.targetPitchRate = pitchRate;
+					this.pitchUpdateCnt = window.pitchNumUpdates;
 				}
-				else {
-					this.deltaPitch = 0;
-				}
-
 			}
-//			p = 10;
+			
+			// See if we need to stop pitch movement
+			if( this.pitchUpdateCnt == 0 ) {
+				this.targetPitchRate = 0;
+			}
+			else {
+				this.pitchUpdateCnt -= 1;
+			}
+			
 		}		
 
-        callback(w, this.deltaPitch,  walkSpeed);
+        callback( yawRate, this.targetPitchRate,  walkSpeed );
     }
 }
 
@@ -171,4 +252,18 @@ function mapTOP(input, t1, t2, k){
     else if(input>t2)
         result = -k;
     return result;
+}
+
+function smoothAcc( curr, target, step ) {
+	if( curr != target ) {
+		if( curr > target ) {
+			curr -= step;
+			if( curr < target ) curr = target;
+		}
+		else if( curr < target ) {
+			curr += step;
+			if( curr > target ) curr = target;
+		}
+	}
+	return curr;
 }

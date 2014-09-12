@@ -8,6 +8,11 @@ var binormal = new THREE.Vector3();
 
 // Constants
 var pitchResetMsec = 3500;
+var maxWalkAcc = maxWalkSpeed / 50;
+//var maxYawAcc  = 0.01; // not used since the head position can't change instantaneously, ie. the head movement is inherently smooth
+var maxPitchAccDeg = 0.02;
+var maxPitchDeg =  45;
+var minPitchDeg = -45;
 
 xLabs.Visitor = function(){
 
@@ -40,7 +45,7 @@ xLabs.Visitor = function(){
 
 xLabs.Visitor.prototype = {
     init : function(){
-        this.container= document.getElementById('container');
+        this.container = document.getElementById('container');
         this.renderer = new THREE.WebGLRenderer({antialias: true});
         this.renderer.setSize(this.width,this.height);
         this.container.appendChild(this.renderer.domElement);
@@ -58,6 +63,8 @@ xLabs.Visitor.prototype = {
         this.loadObject('assets/models/HosierLane/xLabs model.obj', 'assets/models/HosierLane/xLabs model.mtl'); //'assets/models/HosierLane/xLabs model.mtl'
 //        this.loadObject('assets/models/HosierLane/xLabs model.obj', null);
         this.initTrack();
+		
+		keyBoardControler.chase = true;
     },
     start : function(){
         var self = this;
@@ -82,7 +89,7 @@ xLabs.Visitor.prototype = {
         this.parent.add(this.cameraBox);
         this.chaseCamera.lookAt(new THREE.Vector3(-1,0,0));
         this.cameraHelper = new THREE.CameraHelper(this.chaseCamera);
-        this.cameraHelper.visible = true;
+        this.cameraHelper.visible = false;
         this.addObject(this.cameraHelper);
 //        console.log(this.scene);
         this.camera.position.set(15,15,15);
@@ -185,7 +192,7 @@ xLabs.Visitor.prototype = {
             new THREE.Vector3(1.32,0.78,-4.54)]);
         this.tubeGeometry = new THREE.TubeGeometry(this.cameraTrack, 50, 1, 2, true);
         this.tubeMaterial = new THREE.MeshBasicMaterial({color:0xFF3300,wireframe:true});
-        this.tubeMaterial.visible=true;
+        this.tubeMaterial.visible=false;
         this.tube = new THREE.Mesh(this.tubeGeometry, this.tubeMaterial);
         this.addObject(this.tube);
         this.startMov = true;
@@ -198,22 +205,13 @@ xLabs.Visitor.prototype = {
     update : function(){
         var self = this;
 		
-		// Stop moving when facing the wall ???
-		var cameraAngle = movDirection.angleTo(camDirection);		
-		var cameraAngleDeg = cameraAngle*180/Math.PI;
-        var ratio = Math.cos(cameraAngle);
-		var zeroRange = 30;
-		if( cameraAngleDeg >  zeroRange && cameraAngleDeg <  90 + zeroRange ) ratio = 0;
-		if( cameraAngleDeg < -zeroRange && cameraAngleDeg > -90 - zeroRange ) ratio = 0;
-		
-//        var lastCamDir = this.tubeGeometry.parameters.path.getTangentAt(t);
-        t += j*ratio;
+        t += walkSpeed;
         if(t>1) t -= 1;
         if(t<0) t += 1;
         var pos = this.tubeGeometry.parameters.path.getPointAt(t);
         pos.y += 1.1;
 		
-		// Bobbing ???
+		// Bobbing
 		var dy = Math.sin( 2 * Math.PI * t * 120 ) * 0.007;
 		var dx = Math.sin( 2 * Math.PI * t * 120 ) * 0.01;
 		pos.y += dy;
@@ -266,21 +264,41 @@ xLabs.Visitor.prototype = {
             customRotationUp += 1;
         if(keyBoardControler.down)
             customRotationUp -= 1;
-        this.xLabsController.update(function(w, p, v){ //???
-			j = v; // change walking speed
-            customRotation += w;
-            if(self.modeSelection.pitch) customRotationUp += p;
+        this.xLabsController.update(function(targetYawRate, targetPitchRate, targetWalkSpeed){ //???
+			
+			if( targetWalkSpeed > maxWalkSpeed )  targetWalkSpeed = maxWalkSpeed;
+			
+			// Stop moving when facing the wall
+			var cameraAngle = movDirection.angleTo(camDirection);		
+			var cameraAngleDeg = cameraAngle*180/Math.PI;
+			var ratio = Math.cos(cameraAngle);
+			var zeroRange = 30;
+			if( cameraAngleDeg >  zeroRange && cameraAngleDeg <  90 + zeroRange ) ratio = 0;
+			if( cameraAngleDeg < -zeroRange && cameraAngleDeg > -90 - zeroRange ) ratio = 0;	
+			
+			walkSpeed = smoothAcc( walkSpeed, targetWalkSpeed * ratio, maxWalkAcc );
+
+			//yawRate = smoothAcc( yawRate, targetW, maxYawAcc );
+			yawRate = targetYawRate;
+            customRotation += yawRate;
+			
+			if( self.modeSelection.pitch ) {
+				pitchRate = smoothAcc( pitchRate, targetPitchRate, maxPitchAccDeg );
+				customRotationUp += pitchRate;
+				if( customRotationUp > maxPitchDeg ) customRotationUp = maxPitchDeg;
+				if( customRotationUp < minPitchDeg ) customRotationUp = minPitchDeg;
+			}
 			
 			var nowMsec = new Date().getTime();
-			if( p != 0 ) {
+			if( targetPitchRate != 0 ) {
 				xLabs.Visitor.lastPitchChangeMsec = nowMsec;
 			}
 			
 //			console.log( nowMsec );
 //			console.log( xLabs.Visitor.lastPitchChangeMsec );
 //			console.log( pitchResetMsec );
-			if(    nowMsec - xLabs.Visitor.lastPitchChangeMsec > pitchResetMsec ) {
-				var step = 1;
+			if( nowMsec - xLabs.Visitor.lastPitchChangeMsec > pitchResetMsec ) {
+				var step = 0.1;
                 if( customRotationUp >  step ) customRotationUp -= step;
                 if( customRotationUp < -step ) customRotationUp += step;
 			}
@@ -299,11 +317,11 @@ xLabs.Visitor.prototype = {
         this.gui = new dat.GUI();
         this.modeSelection =
         {
-            a: function() {xLabs.mode=0;},
-            b: function() {xLabs.mode=1;},
-            c: function() {xLabs.mode=2;},
+            a: function() {xLabs.mode=xLabs.webCamController.CONTROL_MODE_ROLL;},
+            b: function() {xLabs.mode=xLabs.webCamController.CONTROL_MODE_YAW;},
+            c: function() {xLabs.mode=xLabs.webCamController.CONTROL_MODE_X;},
             pitch: false,
-            autoRotation: true
+            autoRotation: false
         };
         this.gui.add( this.modeSelection, 'a' ).name('Roll Mode (D)');
         this.gui.add( this.modeSelection, 'b' ).name('Yaw Mode');
@@ -319,5 +337,7 @@ var camDirection = new THREE.Vector3(-11,0,0);
 var lastMovDir = new THREE.Vector3(-1,0,0);
 var customRotation = 0, customRotationUp = 0, customRotation2 = 0;
 var t = 0.0;
-var j = 0; //0.00035; //0.00035
+var walkSpeed = 0;
+var yawRate = 0;
+var pitchRate = 0;
 var x=0;
