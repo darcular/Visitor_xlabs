@@ -62,8 +62,9 @@ xLabs.webCamController.prototype = {
     update : function(callback){
 		var walkSpeed = 0.00035;
 		
-		console.log( "this.isFaceDetected: " + this.isFaceDetected );
-        if( !this.isFaceDetected ) {
+//		console.log( "this.isFaceDetected: " + this.isFaceDetected );
+//  	  console.log( "this.headZ: " + this.headZ );
+      if( !this.isFaceDetected ) {
 			walkSpeed = 0;			
 			callback( 0, 0,  walkSpeed );
 			return;
@@ -80,7 +81,7 @@ xLabs.webCamController.prototype = {
         else if(xLabs.mode===1) {
 			var alpha = 0.9;
 			this.yawSmooth = this.yawSmooth * alpha + (1-alpha) * this.yaw;
-			var gain = 8;
+			var gain = 16;
 			var yawMin = 0.04;
 			var yawMax = 0.1;
 			//console.log( "this.yawSmooth: " + this.yawSmooth );
@@ -89,9 +90,9 @@ xLabs.webCamController.prototype = {
         else if(xLabs.mode===2) {
 			var alpha = 0.5;
 			this.xSmooth = this.xSmooth * alpha + (1-alpha) * this.headX;
-			var gain = 1.0;
-			var xMin = 0.2;
-			var xMax = 1.5;
+			var gain = 1.0*0.75;
+			var xMin = 0.2*0.75;
+			var xMax = 1.5*0.75;
 			//console.log( "this.xSmooth: " + this.xSmooth );
             w = mapIntoW( this.xSmooth, gain, xMin, xMax );
 		}

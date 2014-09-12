@@ -276,9 +276,9 @@ xLabs.Visitor.prototype = {
 				xLabs.Visitor.lastPitchChangeMsec = nowMsec;
 			}
 			
-			console.log( nowMsec );
-			console.log( xLabs.Visitor.lastPitchChangeMsec );
-			console.log( pitchResetMsec );
+//			console.log( nowMsec );
+//			console.log( xLabs.Visitor.lastPitchChangeMsec );
+//			console.log( pitchResetMsec );
 			if(    nowMsec - xLabs.Visitor.lastPitchChangeMsec > pitchResetMsec ) {
 				var step = 1;
                 if( customRotationUp >  step ) customRotationUp -= step;
