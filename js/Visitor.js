@@ -320,7 +320,7 @@ xLabs.Visitor.prototype = {
             a: function() {xLabs.mode=xLabs.webCamController.CONTROL_MODE_ROLL;},
             b: function() {xLabs.mode=xLabs.webCamController.CONTROL_MODE_YAW;},
             c: function() {xLabs.mode=xLabs.webCamController.CONTROL_MODE_X;},
-            pitch: false,
+            pitch: true,
             autoRotation: false
         };
         this.gui.add( this.modeSelection, 'a' ).name('Roll Mode (D)');
