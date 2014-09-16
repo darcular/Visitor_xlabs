@@ -7,7 +7,7 @@ var faceDetectedAlpha  = 0.7;
 var faceDetectedThresh = 0.3;
 
 // Mark and space time for showing display
-var displayHelpMarkMsec = 1000;
+var displayHelpMarkMsec = 4000;
 var displayHelpSpaceMsec = 15000;
 var displayHelpWhenNoFace = true;
 
